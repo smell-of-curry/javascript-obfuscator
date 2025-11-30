@@ -4,12 +4,14 @@ import { TDictionary } from './src/types/TDictionary';
 import { TInputOptions } from './src/types/options/TInputOptions';
 import { TObfuscationResultsObject } from './src/types/TObfuscationResultsObject';
 import { TOptionsPreset } from './src/types/options/TOptionsPreset';
+import { TProgressCallback } from './src/types/options/TProgressCallback';
 
 import { IObfuscationResult } from './src/interfaces/source-code/IObfuscationResult';
 
 import { JavaScriptObfuscator } from './src/JavaScriptObfuscatorFacade';
 
 export type ObfuscatorOptions = TInputOptions;
+export type ProgressCallback = TProgressCallback;
 
 export interface ObfuscationResult extends IObfuscationResult {}
 

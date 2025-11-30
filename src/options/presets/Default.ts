@@ -33,6 +33,7 @@ export const DEFAULT_PRESET: TInputOptions = Object.freeze({
     log: false,
     numbersToExpressions: false,
     optionsPreset: OptionsPreset.Default,
+    progressCallback: null,
     renameGlobals: false,
     renameProperties: false,
     renamePropertiesMode: RenamePropertiesMode.Safe,

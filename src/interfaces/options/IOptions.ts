@@ -1,5 +1,6 @@
 import { TIdentifierNamesCache } from '../../types/TIdentifierNamesCache';
 import { TOptionsPreset } from '../../types/options/TOptionsPreset';
+import { TProgressCallback } from '../../types/options/TProgressCallback';
 import { TStringArrayIndexesType } from '../../types/options/TStringArrayIndexesType';
 import { TStringArrayEncoding } from '../../types/options/TStringArrayEncoding';
 import { TStringArrayWrappersType } from '../../types/options/TStringArrayWrappersType';
@@ -32,6 +33,7 @@ export interface IOptions {
     readonly log: boolean;
     readonly numbersToExpressions: boolean;
     readonly optionsPreset: TOptionsPreset;
+    readonly progressCallback: TProgressCallback | null;
     readonly renameGlobals: boolean;
     readonly renameProperties: boolean;
     readonly renamePropertiesMode: TRenamePropertiesMode;

@@ -21,6 +21,7 @@ import {
 import { TIdentifierNamesCache } from '../types/TIdentifierNamesCache';
 import { TInputOptions } from '../types/options/TInputOptions';
 import { TOptionsPreset } from '../types/options/TOptionsPreset';
+import { TProgressCallback } from '../types/options/TProgressCallback';
 import { TRenamePropertiesMode } from '../types/options/TRenamePropertiesMode';
 import { TStringArrayIndexesType } from '../types/options/TStringArrayIndexesType';
 import { TStringArrayEncoding } from '../types/options/TStringArrayEncoding';
@@ -429,6 +430,11 @@ export class Options implements IOptions {
      */
     @IsBoolean()
     public readonly unicodeEscapeSequence!: boolean;
+
+    /**
+     * @type {TProgressCallback | null}
+     */
+    public readonly progressCallback!: TProgressCallback | null;
 
     /**
      * @type {string | number}

@@ -12,7 +12,7 @@ import { TVisitorFunction } from '../types/node-transformers/TVisitorFunction';
 import { TVisitorResult } from '../types/node-transformers/TVisitorResult';
 
 import { INodeTransformer } from '../interfaces/node-transformers/INodeTransformer';
-import { INodeTransformersRunner } from '../interfaces/node-transformers/INodeTransformersRunner';
+import { INodeTransformersRunner, TStageProgressCallback } from '../interfaces/node-transformers/INodeTransformersRunner';
 import { ITransformerNamesGroupsBuilder } from '../interfaces/utils/ITransformerNamesGroupsBuilder';
 import { IVisitor } from '../interfaces/node-transformers/IVisitor';
 
@@ -59,12 +59,14 @@ export class NodeTransformersRunner implements INodeTransformersRunner {
      * @param {T} astTree
      * @param {NodeTransformer[]} nodeTransformerNames
      * @param {NodeTransformationStage} nodeTransformationStage
+     * @param {TStageProgressCallback} progressCallback - Optional callback for granular progress
      * @returns {T}
      */
     public transform <T extends ESTree.Node = ESTree.Program> (
         astTree: T,
         nodeTransformerNames: NodeTransformer[],
-        nodeTransformationStage: NodeTransformationStage
+        nodeTransformationStage: NodeTransformationStage,
+        progressCallback?: TStageProgressCallback
     ): T {
         if (!nodeTransformerNames.length) {
             return astTree;
@@ -74,6 +76,9 @@ export class NodeTransformersRunner implements INodeTransformersRunner {
             this.buildNormalizedNodeTransformers(nodeTransformerNames, nodeTransformationStage);
         const nodeTransformerNamesGroups: NodeTransformer[][] =
             this.nodeTransformerNamesGroupsBuilder.build(normalizedNodeTransformers);
+
+        const totalGroups = nodeTransformerNamesGroups.length;
+        let completedGroups = 0;
 
         for (const nodeTransformerNamesGroup of nodeTransformerNamesGroups) {
             const enterVisitors: IVisitor[] = [];
@@ -97,6 +102,7 @@ export class NodeTransformersRunner implements INodeTransformersRunner {
             }
 
             if (!enterVisitors.length && !leaveVisitors.length) {
+                completedGroups++;
                 continue;
             }
 
@@ -104,6 +110,11 @@ export class NodeTransformersRunner implements INodeTransformersRunner {
                 enter: this.mergeVisitorsForDirection(enterVisitors, VisitorDirection.Enter),
                 leave: this.mergeVisitorsForDirection(leaveVisitors, VisitorDirection.Leave)
             });
+
+            completedGroups++;
+            if (progressCallback) {
+                progressCallback(completedGroups, totalGroups);
+            }
         }
 
         return astTree;

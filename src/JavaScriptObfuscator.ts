@@ -202,40 +202,42 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
      * @returns {Program}
      */
     private transformAstTree (astTree: ESTree.Program): ESTree.Program {
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.Initializing);
+        // Build the list of stages that will actually run based on options
+        const stages: NodeTransformationStage[] = [
+            NodeTransformationStage.Initializing,
+            NodeTransformationStage.Preparing,
+            ...(this.options.deadCodeInjection ? [NodeTransformationStage.DeadCodeInjection] : []),
+            NodeTransformationStage.ControlFlowFlattening,
+            ...(this.options.renameProperties ? [NodeTransformationStage.RenameProperties] : []),
+            NodeTransformationStage.Converting,
+            NodeTransformationStage.RenameIdentifiers,
+            NodeTransformationStage.StringArray,
+            ...(this.options.simplify ? [NodeTransformationStage.Simplifying] : []),
+            NodeTransformationStage.Finalizing
+        ];
 
-        const isEmptyAstTree: boolean = NodeGuards.isProgramNode(astTree)
-            && !astTree.body.length
-            && !astTree.leadingComments
-            && !astTree.trailingComments;
+        const totalStages = stages.length;
+        let currentStageIndex = 0;
 
-        if (isEmptyAstTree) {
-            this.logger.warn(LoggingMessage.EmptySourceCode);
+        for (const stage of stages) {
+            astTree = this.runNodeTransformationStage(astTree, stage, currentStageIndex, totalStages);
 
-            return astTree;
+            // Check for empty AST after Initializing stage
+            if (stage === NodeTransformationStage.Initializing) {
+                const isEmptyAstTree: boolean = NodeGuards.isProgramNode(astTree)
+                    && !astTree.body.length
+                    && !astTree.leadingComments
+                    && !astTree.trailingComments;
+
+                if (isEmptyAstTree) {
+                    this.logger.warn(LoggingMessage.EmptySourceCode);
+
+                    return astTree;
+                }
+            }
+
+            currentStageIndex++;
         }
-
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.Preparing);
-
-        if (this.options.deadCodeInjection) {
-            astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.DeadCodeInjection);
-        }
-
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.ControlFlowFlattening);
-
-        if (this.options.renameProperties) {
-            astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.RenameProperties);
-        }
-
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.Converting);
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.RenameIdentifiers);
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.StringArray);
-
-        if (this.options.simplify) {
-            astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.Simplifying);
-        }
-
-        astTree = this.runNodeTransformationStage(astTree, NodeTransformationStage.Finalizing);
 
         return astTree;
     }
@@ -296,15 +298,39 @@ export class JavaScriptObfuscator implements IJavaScriptObfuscator {
     /**
      * @param {Program} astTree
      * @param {NodeTransformationStage} nodeTransformationStage
+     * @param {number} stageIndex - Current stage index (0-based)
+     * @param {number} totalStages - Total number of stages
      * @returns {Program}
      */
-    private runNodeTransformationStage (astTree: ESTree.Program, nodeTransformationStage: NodeTransformationStage): ESTree.Program {
+    private runNodeTransformationStage (
+        astTree: ESTree.Program,
+        nodeTransformationStage: NodeTransformationStage,
+        stageIndex: number,
+        totalStages: number
+    ): ESTree.Program {
         this.logger.info(LoggingMessage.NodeTransformationStage, nodeTransformationStage);
+
+        // Create a progress callback that reports granular progress within this stage
+        const { progressCallback } = this.options;
+        const stageProgressCallback = progressCallback
+            ? (completedGroups: number, totalGroups: number): void => {
+                // Calculate overall progress: stageIndex + fraction of current stage
+                const stageProgress = totalGroups > 0 ? completedGroups / totalGroups : 1;
+                const overallProgress = (stageIndex + stageProgress) / totalStages;
+                progressCallback(
+                    overallProgress,
+                    nodeTransformationStage,
+                    stageIndex + 1,  // 1-based for user-facing
+                    totalStages
+                );
+            }
+            : undefined;
 
         return this.nodeTransformersRunner.transform(
             astTree,
             JavaScriptObfuscator.nodeTransformersList,
-            nodeTransformationStage
+            nodeTransformationStage,
+            stageProgressCallback
         );
     }
 }
